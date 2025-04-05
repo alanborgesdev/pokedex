@@ -12,7 +12,7 @@ Uma aplicação React que consome a PokeAPI para exibir informações sobre Pok�
 🎨 Estilos dinâmicos baseados no tema
 
 ## 🚀 Tecnologias utilizadas
-✔️ React.js  
+✔️ React.js
 ✔️ React Router 
 ✔️ Styled Components 
 ✔️ Axios 

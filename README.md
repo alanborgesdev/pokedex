@@ -84,7 +84,7 @@ pokedex/
 
 ## 📸 Screenshot
 
-**Tema Light**
+
 
 ![Preview do Pokedex](./src/images/preview.gif)
 

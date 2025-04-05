@@ -4,26 +4,31 @@ Uma aplicação React que consome a PokeAPI para exibir informações sobre Pok�
 
 ## ✨ Funcionalidades
 
-🌗 **Temas Dark/Light** com persistência de preferência
-🖼️ Visualização em grid de Pokémon com paginação
-🔍 Página de detalhes com informações completas
-📱 Design totalmente responsivo
-⚡ Carregamento otimizado com cache
-🎨 Estilos dinâmicos baseados no tema
+- 🌗 **Temas Dark/Light** com persistência de preferência
+- 🖼️ Visualização em grid de Pokémon com paginação
+- 🔍 Página de detalhes com informações completas
+- 📱 Design totalmente responsivo
+- ⚡ Carregamento otimizado com cache
+- � Estilos dinâmicos baseados no tema
 
 ## 🚀 Tecnologias utilizadas
-✔️ React.js
-✔️ React Router 
-✔️ Styled Components 
-✔️ Axios 
-✔️ Context API
-✔️ CSS Variables
-✔️ React Hooks
-✔️ JavaScript (ES6+)
-✔️ Vite (ferramenta de build)
-✔️ PokeAPI (fonte de dados)
-✔️ ESLint
-✔️ Prettier
+
+- **Frontend:**
+  - React.js
+  - React Router
+  - Styled Components
+  - Context API
+  - React Hooks
+  - CSS Variables
+
+- **Ferramentas:**
+  - Vite (ferramenta de build)
+  - Axios
+  - ESLint
+  - Prettier
+
+- **API:**
+  - PokeAPI (fonte de dados)
 
 ## 📁 Estrutura do Projeto
 

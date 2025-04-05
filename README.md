@@ -65,11 +65,11 @@ pokedex/
 
 1. **Clone o repositório:**  
    ```bash
-   git clone https://github.com/alanborgesdev/quest-react-base
+   git clone https://github.com/alanborgesdev/pokedex
    ```
 2. **Acesse a pasta do projeto:**  
    ```bash
-   cd quest-react-base
+   cd pokedex
    ```
 3. **Instale as dependências:**  
    ```bash
@@ -84,7 +84,7 @@ pokedex/
 
 ## 📸 Screenshot
 
-**Tema Light**
+
 
 ![Preview do Pokedex](./src/images/preview.gif)
 

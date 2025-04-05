@@ -86,7 +86,7 @@ pokedex/
 
 **Tema Light**
 
-![Preview do Pokedex](./src/images/preview.png)
+![Preview do Pokedex](./src/images/preview.gif)
 
 ## 💎 Autor
 

@@ -1,5 +1,9 @@
 # Pokédex React App
 
+![MIT License](https://img.shields.io/badge/license-MIT-green)
+
+## Descrição
+
 Uma aplicação React que consome a PokeAPI para exibir informações sobre Pokémon, com suporte a temas claro e escuro.
 
 ## ✨ Funcionalidades
@@ -91,3 +95,7 @@ pokedex/
 ## 💎 Autor
 
 Criado por **[Alan Borges](https://github.com/alanborgesdev)** 🚀
+
+## 📝 Licença
+
+O código-fonte deste projeto está sob a licença MIT.

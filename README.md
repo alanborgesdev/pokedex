@@ -1,101 +1,59 @@
-# Pokédex React App
+# 🚀 Pokédex com React
 
-![MIT License](https://img.shields.io/badge/license-MIT-green)
+![Prévia da Aplicação](./src/images/preview.gif)
 
-## Descrição
+> Uma Pokédex interativa desenvolvida com React, consumindo a PokeAPI para exibir dados detalhados de Pokémon. Inclui temas, cache e design totalmente responsivo.
 
-Uma aplicação React que consome a PokeAPI para exibir informações sobre Pokémon, com suporte a temas claro e escuro.
+### 🔗 [Acesse a Demo Ao Vivo](https://pokedex-ecru-seven.vercel.app/)
 
-## ✨ Funcionalidades
+---
 
-- 🌗 **Temas Dark/Light** com persistência de preferência
-- 🖼️ Visualização em grid de Pokémon com paginação
-- 🔍 Página de detalhes com informações completas
-- 📱 Design totalmente responsivo
-- ⚡ Carregamento otimizado com cache
-- � Estilos dinâmicos baseados no tema
+### ✨ Funcionalidades
 
-## 🚀 Tecnologias utilizadas
+- **Alternância de Tema:** Suporte a temas claro e escuro, com a preferência do usuário salva no `localStorage`.
+- **Cache Inteligente:** Armazena os dados da API em cache para evitar requisições repetidas e acelerar a navegação.
+- **Paginação Eficiente:** Navegue por centenas de Pokémon sem sobrecarregar a API ou a interface.
+- **Página de Detalhes Completa:** Visualize status, habilidades e tipos de cada Pokémon em uma página dedicada.
+- **Design Responsivo:** Experiência otimizada para visualização em desktops, tablets e celulares.
 
-- **Frontend:**
-  - React.js
-  - React Router
-  - Styled Components
-  - Context API
-  - React Hooks
-  - CSS Variables
+---
 
-- **Ferramentas:**
-  - Vite (ferramenta de build)
-  - Axios
-  - ESLint
-  - Prettier
+### 🛠️ Stack de Tecnologias
 
-- **API:**
-  - PokeAPI (fonte de dados)
+- **React** e **Vite** para a base da aplicação e o ambiente de desenvolvimento.
+- **React Router** para gerenciamento de rotas (client-side routing).
+- **Styled Components** para estilização componentizada e dinâmica.
+- **Context API** para gerenciamento de estado global (ex: tema).
+- **Axios** para realizar as requisições HTTP à PokeAPI.
+- **ESLint** para garantir a qualidade e a consistência do código.
 
-## 📁 Estrutura do Projeto
+---
 
+### 🔧 Como Rodar o Projeto
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/alanborgesdev/pokedex.git
+
+# 2. Navegue até o diretório
+cd pokedex
+
+# 3. Instale as dependências
+npm install
+
+# 4. Inicie a aplicação em modo de desenvolvimento
+npm run dev
+
+# 5. Abra http://localhost:5173 (ou a porta indicada no terminal) no seu navegador.
 ```
-pokedex/
-├── src/
-│   ├── components/
-│   │   ├── pokemon-card/
-│   │   │   └── pokemon-card.jsx
-│   │   └── theme-toggle/
-│   │       └── theme-toggle.jsx
-│   │
-│   ├── contexts/
-│   │   └── theme-context.jsx
-│   │
-│   ├── pages/
-│   │   ├── home.jsx
-│   │   ├── pokemon-detail.jsx
-│   │   └── routes.jsx
-│   │
-│   ├── services/
-│   │   └── api.jsx
-│   │
-│   ├── styles/
-│   │   ├── global-styles.jsx
-│   │   └── theme.jsx
-│   │
-│   ├── App.css
-│   ├── App.jsx
-│   └── main.jsx
-│
-```
-## ▶️ Como rodar o projeto  
+---
 
-1. **Clone o repositório:**  
-   ```bash
-   git clone https://github.com/alanborgesdev/pokedex
-   ```
-2. **Acesse a pasta do projeto:**  
-   ```bash
-   cd pokedex
-   ```
-3. **Instale as dependências:**  
-   ```bash
-   npm install
-   ```
-4. **Inicie o servidor de desenvolvimento:**  
-   ```bash
-   npm run dev
-   ```
-5. **Abra no navegador:**  
-   O projeto estará rodando em: `http://localhost:3000`
+### 👤 Autor  
 
-## 📸 Screenshot
+Este projeto foi desenvolvido por **[Alan Borges](https://github.com/alanborgesdev)**.
 
+---
 
+### 📝 Licença
 
-![Preview do Pokedex](./src/images/preview.gif)
-
-## 💎 Autor
-
-Criado por **[Alan Borges](https://github.com/alanborgesdev)** 🚀
-
-## 📝 Licença
-
-O código-fonte deste projeto está sob a licença MIT.
+O código-fonte deste projeto está licenciado sob a [Licença MIT](LICENSE).

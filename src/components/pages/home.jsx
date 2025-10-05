@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PokemonCard from '../pokemon-card/pokemon-card';
 import ThemeToggle from '../theme-toggle/theme-toggle';
 import { getPokemons, getPokemonDetails } from '../services/api';
@@ -7,14 +7,19 @@ import styled from 'styled-components';
 const Home = () => {
     // Estados que vou usar
     const [pokemons, setPokemons] = useState([]); // Lista completa
-    const [pokemonsFiltrados, setPokemonsFiltrados] = useState([]); // Lista filtrada
     const [loading, setLoading] = useState(true); // Loading inicial
     const [loadingMore, setLoadingMore] = useState(false); // Loading ao carregar mais
     const [error, setError] = useState(null); // Mensagem de erro
     const [offset, setOffset] = useState(0); // Paginação
     const [tipoSelecionado, setTipoSelecionado] = useState('all'); // Tipo selecionado
-    const [tiposDisponiveis, setTiposDisponiveis] = useState([]); // Tipos para filtro
+    const [tiposDisponiveis, setTiposDisponiveis] = useState(['all']); // Tipos para filtro
     const LIMITE = 10; // Quantos pokémons carregar por vez
+
+    // ✅ MELHORIA: useMemo em vez de estado duplicado
+    const pokemonsFiltrados = useMemo(() => {
+        if (tipoSelecionado === 'all') return pokemons;
+        return pokemons.filter((p) => p.types.includes(tipoSelecionado));
+    }, [pokemons, tipoSelecionado]);
 
     // Busca os pokémons na API
     const fetchPokemons = async (offsetAtual) => {
@@ -24,7 +29,7 @@ const Home = () => {
 
             const listaPokemons = await getPokemons(offsetAtual, LIMITE);
 
-            // ✅ MUDANÇA: Promise.all para requests paralelos
+            // ✅ Promise.all para requests paralelos
             const pokemonsCompleto = await Promise.all(
                 listaPokemons.map(async (pokemon) => {
                     const detalhes = await getPokemonDetails(pokemon.name);
@@ -36,18 +41,21 @@ const Home = () => {
             );
 
             // ✅ Atualiza estado de forma funcional
-            setPokemons((prev) =>
-                offsetAtual === 0 ? pokemonsCompleto : [...prev, ...pokemonsCompleto]
-            );
+            setPokemons((prev) => {
+                const novosPokemons = offsetAtual === 0
+                    ? pokemonsCompleto
+                    : [...prev, ...pokemonsCompleto];
+
+                // ✅ Calcula tipos enquanto já tem os dados
+                const todosTipos = new Set();
+                novosPokemons.forEach((p) => p.types.forEach((t) => todosTipos.add(t)));
+                setTiposDisponiveis(['all', ...Array.from(todosTipos).sort()]);
+
+                return novosPokemons;
+            });
+
             setOffset(offsetAtual + LIMITE);
 
-            // ✅ Calcula tipos de forma mais eficiente
-            setPokemons((prevPokemons) => {
-                const todosTipos = new Set();
-                prevPokemons.forEach((p) => p.types.forEach((t) => todosTipos.add(t)));
-                setTiposDisponiveis(['all', ...Array.from(todosTipos).sort()]);
-                return prevPokemons;
-            });
         } catch (e) {
             console.error('Erro ao buscar pokémons:', e);
             setError('Erro ao carregar pokémons. Tente novamente.');
@@ -62,28 +70,16 @@ const Home = () => {
         fetchPokemons(offset);
     };
 
-    // Filtra os pokémons por tipo
+    // ✅ SIMPLIFICADO: só atualiza o estado
     const handleFilterChange = (e) => {
-        const tipo = e.target.value;
-        setTipoSelecionado(tipo);
-
-        if (tipo === 'all') {
-            setPokemonsFiltrados(pokemons);
-        } else {
-            const filtrados = pokemons.filter((p) => p.types.includes(tipo));
-            setPokemonsFiltrados(filtrados);
-        }
+        setTipoSelecionado(e.target.value);
+        // O useMemo acima já cuida de recalcular pokemonsFiltrados
     };
 
     // Efeito pra carregar os pokémons iniciais
     useEffect(() => {
         fetchPokemons(0);
-    }, []);
-
-    // Atualiza a lista filtrada quando os pokémons mudam
-    useEffect(() => {
-        setPokemonsFiltrados(pokemons);
-    }, [pokemons]);
+    }, []); // ✅ Array vazio = só executa uma vez
 
     // Tela de loading
     if (loading) {
@@ -122,7 +118,9 @@ const Home = () => {
             {error && (
                 <ErrorBox>
                     {error}
-                    <RetryButton onClick={() => fetchPokemons(offset)}>Tentar de novo</RetryButton>
+                    <RetryButton onClick={() => fetchPokemons(offset)}>
+                        Tentar de novo
+                    </RetryButton>
                 </ErrorBox>
             )}
 
@@ -141,7 +139,7 @@ const Home = () => {
     );
 };
 
-/* Estilos - vou deixar mais simples */
+/* Estilos */
 
 const MainContainer = styled.main`
     padding: 20px;

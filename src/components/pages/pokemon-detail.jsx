@@ -1,32 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // ✅ ADICIONAR useNavigate
 import { getPokemonDetails } from '../services/api';
 import styled from 'styled-components';
 
-// Componente que mostra os detalhes de um Pokémon
 const PokemonDetail = () => {
-  // Pega o nome do Pokémon da URL
   const { name } = useParams();
-  
-  // Estados pra controlar o que aparece na tela
+  const navigate = useNavigate(); // ✅ ADICIONAR
   const [pokemon, setPokemon] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
 
-  // Quando o componente carrega, busca os dados
   useEffect(() => {
     const pegarPokemon = async () => {
       try {
         setCarregando(true);
         setErro(null);
-        
-        // Faz a chamada pra API
         const dadosPokemon = await getPokemonDetails(name);
         setPokemon(dadosPokemon);
-        
       } catch (error) {
-        // Se der erro, guarda a mensagem
-        setErro('Opa, deu ruim ao buscar o Pokémon!');
+        setErro('Erro ao buscar o Pokémon!');
         console.error('Erro ao buscar Pokémon:', error);
       } finally {
         setCarregando(false);
@@ -36,49 +28,58 @@ const PokemonDetail = () => {
     pegarPokemon();
   }, [name]);
 
-  // Mostra que está carregando
   if (carregando) {
     return (
       <DivCarregando>
+        <LoadingSpinner>⏳</LoadingSpinner>
         <p>Procurando o Pokémon...</p>
       </DivCarregando>
     );
   }
 
-  // Mostra erro se tiver ocorrido
   if (erro) {
     return (
       <DivErro>
+        <ErrorIcon>⚠️</ErrorIcon>
         <p>{erro}</p>
+        {/* ✅ ADICIONAR botão de voltar no erro */}
+        <BackButton onClick={() => navigate('/')}>
+          ← Voltar para Home
+        </BackButton>
       </DivErro>
     );
   }
 
-  // Se não encontrou o Pokémon
   if (!pokemon) {
     return (
       <DivNaoEncontrado>
         <p>Não achei esse Pokémon :(</p>
+        {/* ✅ ADICIONAR botão de voltar */}
+        <BackButton onClick={() => navigate('/')}>
+          ← Voltar para Home
+        </BackButton>
       </DivNaoEncontrado>
     );
   }
 
-  // Mostra os detalhes do Pokémon
   return (
     <DivPrincipal>
-      {/* Cabeçalho com imagem e nome */}
+      {/* ✅ ADICIONAR botão de voltar no topo */}
+      <BackButton onClick={() => navigate('/')}>
+        ← Voltar para todos os pokémons
+      </BackButton>
+
       <Cabecalho>
         <ImagemPokemon
           src={pokemon.sprites?.front_default || '/placeholder.png'}
           alt={pokemon.name}
           onError={(e) => {
-            e.target.src = '/placeholder.png'; // Se a imagem não carregar
+            e.target.src = '/placeholder.png';
           }}
         />
         <NomePokemon>{pokemon.name}</NomePokemon>
       </Cabecalho>
 
-      {/* Seção de tipos */}
       <Secao>
         <h2>Tipos</h2>
         <ListaTipos>
@@ -90,7 +91,6 @@ const PokemonDetail = () => {
         </ListaTipos>
       </Secao>
 
-      {/* Seção de habilidades */}
       <Secao>
         <h2>Habilidades</h2>
         <ListaHabilidades>
@@ -102,7 +102,6 @@ const PokemonDetail = () => {
         </ListaHabilidades>
       </Secao>
 
-      {/* Seção de movimentos (só mostra 10 pra não ficar enorme) */}
       <Secao>
         <h2>Movimentos</h2>
         <ListaMovimentos>
@@ -117,16 +116,44 @@ const PokemonDetail = () => {
   );
 };
 
-/* Estilos usando styled-components */
+/* Estilos */
+
+// ✅ ADICIONAR: Estilo do botão voltar
+const BackButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: ${({ theme }) => theme.shadows.card};
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ${({ theme }) => theme.shadows.hover};
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
 
 const DivPrincipal = styled.div`
   padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
-  background: var(--color-cardBackground);
+  background: ${({ theme }) => theme.colors.cardBackground};
   border-radius: 8px;
-  box-shadow: 0 2px 4px var(--color-shadow);
-  color: var(--color-text);
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Cabecalho = styled.div`
@@ -140,23 +167,29 @@ const ImagemPokemon = styled.img`
   width: 96px;
   height: 96px;
   object-fit: contain;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.primary};
   border-radius: 8px;
-  filter: var(--image-filter);
+  padding: 0.5rem;
 `;
 
 const NomePokemon = styled.h1`
   text-transform: capitalize;
   margin: 0;
-  color: var(--color-text);
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 2rem;
 `;
 
 const Secao = styled.section`
   margin: 1.5rem 0;
   padding: 1.25rem;
-  background: rgba(120, 120, 120, 0.15);
+  background: ${({ theme }) => theme.colors.secondary};
   border-radius: 8px;
-  color: var(--color-text);
+
+  h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
 const ListaTipos = styled.div`
@@ -171,7 +204,7 @@ const Tipo = styled.span`
   border-radius: 1rem;
   font-weight: bold;
   text-transform: capitalize;
-  background-color: #F08030; /* Laranja fixo pra todos os tipos */
+  background-color: #f08030;
 `;
 
 const ListaHabilidades = styled.ul`
@@ -183,9 +216,10 @@ const ListaHabilidades = styled.ul`
 
 const Habilidade = styled.li`
   padding: 0.5rem;
+  background: ${({ theme }) => theme.colors.cardBackground};
   border-radius: 4px;
   text-transform: capitalize;
-  color: var(--color-text);
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const ListaMovimentos = styled.ul`
@@ -203,28 +237,51 @@ const Movimento = styled.li`
   padding: 0.25rem 0;
   text-transform: capitalize;
   break-inside: avoid;
-  color: var(--color-text);
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const DivCarregando = styled.div`
   text-align: center;
   padding: 2rem;
   font-size: 1.2rem;
-  color: var(--color-text);
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const LoadingSpinner = styled.div`
+  font-size: 3rem;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 `;
 
 const DivErro = styled.div`
   text-align: center;
   padding: 2rem;
-  color: var(--color-error);
+  color: ${({ theme }) => theme.colors.error};
   font-size: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const ErrorIcon = styled.div`
+  font-size: 3rem;
+  margin-bottom: 1rem;
 `;
 
 const DivNaoEncontrado = styled.div`
   text-align: center;
   padding: 2rem;
-  color: var(--color-warning);
+  color: ${({ theme }) => theme.colors.warning};
   font-size: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 `;
 
 export default PokemonDetail;

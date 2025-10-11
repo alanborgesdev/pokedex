@@ -99,3 +99,55 @@ export const fetchWithCache = async (key, fetchFunction) => {
   pokemonCache.set(key, data);
   return data;
 };
+
+export const searchPokemonByName = async (name) => {
+  try {
+    if (!name || name.length < 2) {
+      return null;
+    }
+
+    const response = await apiPokemon.get(`pokemon/${name.toLowerCase()}`);
+
+    if (!response.data) {
+      return null;
+    }
+
+    return {
+      id: response.data.id,
+      name: response.data.name,
+      url: `https://pokeapi.co/api/v2/pokemon/${response.data.id}/`,
+      types: response.data.types.map(t => t.type.name),
+      sprites: response.data.sprites,
+    };
+  } catch (error) {
+    // Se não encontrar, retorna null (não é erro grave)
+    if (error.response?.status === 404) {
+      return null;
+    }
+    console.error('Erro ao buscar pokémon:', error.message);
+    return null;
+  }
+};
+
+export const getAllPokemonNames = async () => {
+  try {
+    // Busca TODOS os nomes (são ~1000 pokémons)
+    const response = await apiPokemon.get('pokemon', {
+      params: { limit: 1000, offset: 0 }
+    });
+
+    if (!response.data?.results) {
+      throw new Error('Formato de resposta inesperado');
+    }
+
+    // Retorna só nome e ID (leve e rápido)
+    return response.data.results.map(pokemon => ({
+      name: pokemon.name,
+      id: pokemon.url.split('/').filter(Boolean).pop()
+    }));
+
+  } catch (error) {
+    console.error('Erro ao buscar lista de nomes:', error.message);
+    return [];
+  }
+};

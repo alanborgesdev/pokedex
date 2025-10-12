@@ -5,7 +5,7 @@ import SearchBar from '../search-bar/search-bar';
 import { getPokemons, getPokemonDetails, getAllPokemonNames } from '../services/api';
 import styled from 'styled-components';
 
-// ✅ CORREÇÃO #3: Reducer para gerenciar estado de busca
+// Reducer para gerenciar estado de busca
 const searchReducer = (state, action) => {
   switch (action.type) {
     case 'SEARCH_START':
@@ -58,10 +58,11 @@ const Home = () => {
   const [tipoSelecionado, setTipoSelecionado] = useState('all');
   const [tiposDisponiveis, setTiposDisponiveis] = useState(['all']);
 
-  // ✅ CORREÇÃO #3: Usar useReducer ao invés de múltiplos useState
   const [searchState, dispatchSearch] = useReducer(searchReducer, initialSearchState);
 
-  const LIMITE = 10;
+  const LIMITE = useMemo(() => 10, []);
+  // ✅ NOVO: Tamanho dos lotes para carregar detalhes
+  const BATCH_SIZE = useMemo(() => 3, []);
 
   // Carrega lista completa de nomes uma vez
   useEffect(() => {
@@ -73,8 +74,15 @@ const Home = () => {
   }, []);
 
   const tipos = useMemo(() => {
+    if (pokemons.length === 0) return ['all'];
+
     const todosTipos = new Set();
-    pokemons.forEach((p) => p.types?.forEach((t) => todosTipos.add(t)));
+    pokemons.forEach((p) => {
+      if (p.types && Array.isArray(p.types)) {
+        p.types.forEach((t) => todosTipos.add(t));
+      }
+    });
+
     return ['all', ...Array.from(todosTipos).sort()];
   }, [pokemons]);
 
@@ -82,69 +90,151 @@ const Home = () => {
     setTiposDisponiveis(tipos);
   }, [tipos]);
 
-  // ✅ CORREÇÃO #2: Filtro otimizado usando searchState
   const pokemonsFiltrados = useMemo(() => {
-    // Se há resultado de busca específico, retorna apenas ele
     if (searchState.result) {
       return [searchState.result];
     }
 
-    // Otimização: se não há filtros, retorna original
-    if (tipoSelecionado === 'all' && !searchState.term) {
+    const hasTypeFilter = tipoSelecionado !== 'all';
+    const hasSearchTerm = searchState.term && searchState.term.length >= 2;
+
+    if (!hasTypeFilter && !hasSearchTerm) {
       return pokemons;
     }
 
     let resultado = pokemons;
 
-    // Filtra por tipo (se selecionado)
-    if (tipoSelecionado !== 'all') {
-      resultado = resultado.filter((p) => p.types?.includes(tipoSelecionado));
+    if (hasTypeFilter) {
+      resultado = resultado.filter((p) =>
+        p.types && p.types.includes(tipoSelecionado)
+      );
     }
 
-    // Filtra por termo de busca (se existe)
-    if (searchState.term) {
+    if (hasSearchTerm) {
       const termLower = searchState.term.toLowerCase();
       resultado = resultado.filter((p) =>
-        p.name.toLowerCase().includes(termLower)
+        p.name && p.name.toLowerCase().includes(termLower)
       );
     }
 
     return resultado;
   }, [pokemons, tipoSelecionado, searchState.term, searchState.result]);
 
-  // ✅ CORREÇÃO #2: Lógica de busca consolidada e refatorada
+  // ✅ NOVO: Função para carregar detalhes em background (lotes)
+  const loadPokemonDetailsInBackground = useCallback(async (pokemonsList) => {
+    // Carrega em lotes para não sobrecarregar a API
+    for (let i = 0; i < pokemonsList.length; i += BATCH_SIZE) {
+      const batch = pokemonsList.slice(i, i + BATCH_SIZE);
+
+      const detailsPromises = batch.map(async (pokemon) => {
+        try {
+          const detalhes = await getPokemonDetails(pokemon.name);
+          return {
+            name: pokemon.name,
+            types: detalhes.types || [],
+          };
+        } catch (error) {
+          console.error(`Erro ao carregar detalhes de ${pokemon.name}:`, error);
+          return {
+            name: pokemon.name,
+            types: ['unknown'],
+          };
+        }
+      });
+
+      const batchDetails = await Promise.all(detailsPromises);
+
+      // Atualiza estado com detalhes do lote
+      setPokemons((prev) =>
+        prev.map((p) => {
+          const detail = batchDetails.find((d) => d.name === p.name);
+          if (detail && !p.isDetailsLoaded) {
+            return {
+              ...p,
+              types: detail.types,
+              isDetailsLoaded: true
+            };
+          }
+          return p;
+        })
+      );
+
+      // Pequeno delay entre lotes para não sobrecarregar
+      if (i + BATCH_SIZE < pokemonsList.length) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+  }, [BATCH_SIZE]);
+
+  // ✅ MODIFICADO: fetchPokemons agora carrega estrutura básica primeiro
+  const fetchPokemons = useCallback(async (offsetAtual) => {
+    try {
+      offsetAtual === 0 ? setLoading(true) : setLoadingMore(true);
+      setError(null);
+
+      const listaPokemons = await getPokemons(offsetAtual, LIMITE);
+
+      // ✅ MUDANÇA CRÍTICA: Não buscar detalhes aqui, apenas estrutura básica
+      const pokemonsBasicos = listaPokemons.map((pokemon) => ({
+        ...pokemon,
+        types: [], // Será carregado depois em background
+        isDetailsLoaded: false,
+      }));
+
+      // Atualiza estado imediatamente com dados básicos
+      setPokemons((prev) => {
+        if (offsetAtual === 0) {
+          return pokemonsBasicos;
+        }
+
+        const prevIds = new Set(prev.map(p => p.id || p.name));
+        const novos = pokemonsBasicos.filter(p => !prevIds.has(p.id || p.name));
+
+        return novos.length > 0 ? [...prev, ...novos] : prev;
+      });
+
+      setOffset(offsetAtual + LIMITE);
+
+      // ✅ Remove loading ANTES de carregar detalhes (UX melhor!)
+      setLoading(false);
+      setLoadingMore(false);
+
+      // ✅ NOVO: Carrega detalhes em background (não bloqueia UI)
+      loadPokemonDetailsInBackground(pokemonsBasicos);
+
+    } catch (e) {
+      console.error('Erro ao buscar pokémons:', e);
+      setError('Erro ao carregar pokémons. Tente novamente.');
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [LIMITE, loadPokemonDetailsInBackground]);
+
   const handleSearch = useCallback(
     async (term) => {
-      // Limpa busca anterior
       dispatchSearch({ type: 'SEARCH_CLEAR' });
 
-      // Validação básica
       if (!term || term.length < 2) {
         return;
       }
 
       const searchTermLower = term.toLowerCase().trim();
 
-      // 1ª tentativa: busca local (pokémons já carregados)
       const localMatch = pokemons.find(
-        (p) => p.name.toLowerCase() === searchTermLower
+        (p) => p.name && p.name.toLowerCase() === searchTermLower
       );
 
       if (localMatch) {
-        // Pokémon encontrado localmente, apenas atualiza o termo
-        // O filtro pokemonsFiltrados vai mostrar automaticamente
         dispatchSearch({ type: 'SEARCH_START', payload: term });
         dispatchSearch({ type: 'SEARCH_SUCCESS', payload: null });
         return;
       }
 
-      // 2ª tentativa: busca na lista completa de nomes
       const nameInList = allPokemonNames.find(
-        (p) => p.name.toLowerCase() === searchTermLower
+        (p) => p.name && p.name.toLowerCase() === searchTermLower
       );
 
       if (!nameInList) {
-        // Pokémon não existe na lista completa
         dispatchSearch({
           type: 'SEARCH_ERROR',
           payload: 'Pokémon não encontrado'
@@ -152,7 +242,6 @@ const Home = () => {
         return;
       }
 
-      // 3ª tentativa: busca na API (pokémon existe mas não está carregado)
       dispatchSearch({ type: 'SEARCH_START', payload: term });
 
       try {
@@ -162,8 +251,9 @@ const Home = () => {
           id: details.id,
           name: details.name,
           url: `https://pokeapi.co/api/v2/pokemon/${details.id}/`,
-          types: details.types,
+          types: details.types || [],
           sprites: details.sprites,
+          isDetailsLoaded: true, // ✅ Já vem com detalhes
         };
 
         dispatchSearch({
@@ -181,63 +271,45 @@ const Home = () => {
     [pokemons, allPokemonNames]
   );
 
-  // ✅ Função fetchPokemons memoizada
-  const fetchPokemons = useCallback(async (offsetAtual) => {
-    try {
-      offsetAtual === 0 ? setLoading(true) : setLoadingMore(true);
-      setError(null);
-
-      const listaPokemons = await getPokemons(offsetAtual, LIMITE);
-
-      const pokemonsCompleto = await Promise.all(
-        listaPokemons.map(async (pokemon) => {
-          const detalhes = await getPokemonDetails(pokemon.name);
-          return {
-            ...pokemon,
-            types: detalhes.types,
-          };
-        })
-      );
-
-      setPokemons((prev) => {
-        const novosPokemons =
-          offsetAtual === 0 ? pokemonsCompleto : [...prev, ...pokemonsCompleto];
-        return novosPokemons;
-      });
-
-      setOffset(offsetAtual + LIMITE);
-    } catch (e) {
-      console.error('Erro ao buscar pokémons:', e);
-      setError('Erro ao carregar pokémons. Tente novamente.');
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [LIMITE]);
-
-  // ✅ Callbacks memoizados
   const handleLoadMore = useCallback(() => {
     fetchPokemons(offset);
   }, [offset, fetchPokemons]);
 
   const handleFilterChange = useCallback((e) => {
-    setTipoSelecionado(e.target.value);
+    const newValue = e.target.value;
+    setTipoSelecionado(newValue);
   }, []);
 
   const handleClearSearch = useCallback(() => {
     dispatchSearch({ type: 'SEARCH_CLEAR' });
   }, []);
 
+  const handleClearAllFilters = useCallback(() => {
+    dispatchSearch({ type: 'SEARCH_CLEAR' });
+    setTipoSelecionado('all');
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    fetchPokemons(offset);
+  }, [offset, fetchPokemons]);
+
   useEffect(() => {
     fetchPokemons(0);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const hasNoResults = pokemonsFiltrados.length === 0 && !loading && !searchState.isSearching;
+  const showLoadMoreButton = !loading &&
+                              !loadingMore &&
+                              tipoSelecionado === 'all' &&
+                              !searchState.term &&
+                              !searchState.result;
+
   if (loading) {
     return (
       <LoadingContainer>
-        <LoadingSpinner>⏳</LoadingSpinner>
-        <p>Carregando pokémons...</p>
-        <small>Isso pode demorar um pouco</small>
+        <LoadingSpinner>⚡</LoadingSpinner>
+        <LoadingText>Carregando pokémons...</LoadingText>
+        <LoadingSubtext>Preparando sua Pokédex...</LoadingSubtext>
       </LoadingContainer>
     );
   }
@@ -276,7 +348,6 @@ const Home = () => {
         </FilterLabel>
       </FilterSection>
 
-      {/* ✅ Botão de voltar quando há resultado de busca específico */}
       {searchState.result && (
         <BackButtonContainer>
           <BackButton onClick={handleClearSearch}>
@@ -288,12 +359,11 @@ const Home = () => {
       {error && (
         <ErrorBox>
           {error}
-          <RetryButton onClick={() => fetchPokemons(offset)}>Tentar de novo</RetryButton>
+          <RetryButton onClick={handleRetry}>Tentar de novo</RetryButton>
         </ErrorBox>
       )}
 
-      {/* ✅ Mensagem quando não há resultados */}
-      {pokemonsFiltrados.length === 0 && !loading && !searchState.isSearching && (
+      {hasNoResults && (
         <NoResultsContainer>
           <NoResultsIcon>🔍</NoResultsIcon>
           <NoResultsText>
@@ -301,12 +371,7 @@ const Home = () => {
             {searchState.term && ` com o nome "${searchState.term}"`}
             {tipoSelecionado !== 'all' && ` do tipo "${tipoSelecionado}"`}
           </NoResultsText>
-          <ClearFiltersButton
-            onClick={() => {
-              handleClearSearch();
-              setTipoSelecionado('all');
-            }}
-          >
+          <ClearFiltersButton onClick={handleClearAllFilters}>
             Limpar filtros
           </ClearFiltersButton>
         </NoResultsContainer>
@@ -314,19 +379,24 @@ const Home = () => {
 
       <PokemonGrid>
         {pokemonsFiltrados.map((pokemon) => (
-          <PokemonCard key={pokemon.id || pokemon.name} pokemon={pokemon} />
+          <PokemonCard
+            key={pokemon.id || pokemon.name}
+            pokemon={pokemon}
+          />
         ))}
       </PokemonGrid>
 
-      {loadingMore && <LoadingMoreText>Carregando mais pokémons...</LoadingMoreText>}
+      {loadingMore && (
+        <LoadingMoreContainer>
+          <LoadingMoreSpinner>⚡</LoadingMoreSpinner>
+          <LoadingMoreText>Carregando mais pokémons...</LoadingMoreText>
+        </LoadingMoreContainer>
+      )}
 
-      {/* ✅ Botão "Ver mais" só aparece quando não há filtros ativos */}
-      {!loading &&
-       !loadingMore &&
-       tipoSelecionado === 'all' &&
-       !searchState.term &&
-       !searchState.result && (
-        <LoadMoreButton onClick={handleLoadMore}>Ver mais pokémons</LoadMoreButton>
+      {showLoadMoreButton && (
+        <LoadMoreButton onClick={handleLoadMore}>
+          Ver mais pokémons
+        </LoadMoreButton>
       )}
     </MainContainer>
   );
@@ -354,6 +424,8 @@ const Title = styled.h1`
   margin: 0;
   font-family: Verdana, sans-serif;
   font-size: 2.5rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
 const SearchSection = styled.div`
@@ -415,10 +487,47 @@ const LoadingContainer = styled.div`
   align-items: center;
   gap: 1rem;
   color: ${({ theme }) => theme.colors.text};
+  min-height: 60vh;
+  justify-content: center;
 `;
 
 const LoadingSpinner = styled.div`
-  font-size: 3rem;
+  font-size: 4rem;
+  animation: bounce 0.6s ease-in-out infinite alternate;
+
+  @keyframes bounce {
+    from {
+      transform: translateY(0) scale(1);
+    }
+    to {
+      transform: translateY(-20px) scale(1.1);
+    }
+  }
+`;
+
+const LoadingText = styled.p`
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text};
+  margin: 0;
+`;
+
+const LoadingSubtext = styled.small`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.text};
+  opacity: 0.7;
+`;
+
+const LoadingMoreContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 2rem 0;
+`;
+
+const LoadingMoreSpinner = styled.div`
+  font-size: 2rem;
   animation: spin 1s linear infinite;
 
   @keyframes spin {
@@ -429,6 +538,13 @@ const LoadingSpinner = styled.div`
       transform: rotate(360deg);
     }
   }
+`;
+
+const LoadingMoreText = styled.p`
+  text-align: center;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.95rem;
+  margin: 0;
 `;
 
 const NoResultsContainer = styled.div`
@@ -449,6 +565,7 @@ const NoResultsText = styled.p`
   font-size: 1.1rem;
   color: ${({ theme }) => theme.colors.text};
   max-width: 400px;
+  margin: 0;
 `;
 
 const ClearFiltersButton = styled.button`
@@ -458,12 +575,17 @@ const ClearFiltersButton = styled.button`
   border: none;
   border-radius: 8px;
   font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    opacity: 0.8;
+    opacity: 0.9;
     transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
@@ -486,38 +608,41 @@ const RetryButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-weight: 600;
 
   &:hover {
-    opacity: 0.8;
+    opacity: 0.9;
   }
-`;
-
-const LoadingMoreText = styled.p`
-  text-align: center;
-  margin: 2rem 0;
-  color: ${({ theme }) => theme.colors.text};
 `;
 
 const LoadMoreButton = styled.button`
   display: block;
   margin: 30px auto;
-  padding: 10px 20px;
+  padding: 12px 24px;
   background: ${({ theme }) => theme.colors.success};
   color: white;
   border: none;
   border-radius: 8px;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    opacity: 0.8;
+    opacity: 0.9;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -529,13 +654,12 @@ const SearchingText = styled.p`
   font-weight: 500;
 `;
 
-// ✅ NOVO: Mensagem de erro de busca
 const SearchErrorText = styled.p`
   text-align: center;
   margin-top: 0.5rem;
   color: ${({ theme }) => theme.colors.error};
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
 `;
 
 const BackButtonContainer = styled.div`
@@ -551,6 +675,7 @@ const BackButton = styled.button`
   border: 2px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 

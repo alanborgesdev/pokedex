@@ -5,7 +5,7 @@ import { ThemeContext } from '../contexts/theme-context';
 export function useTheme() {
   // Pega o contexto do tema
   const theme = useContext(ThemeContext);
-  
+
   // Se não tiver tema, deu erro - provavelmente esqueceu do Provider
   if (theme === undefined) {
     throw new Error(
@@ -21,7 +21,7 @@ export function useTheme() {
       '}'
     );
   }
-  
+
   // Retorna tudo que tem no contexto do tema
   return theme;
 }

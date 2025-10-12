@@ -41,7 +41,7 @@ describe('Testes do botão de tema', () => {
   it('deve trocar pro tema escuro quando chamado', () => {
     // Simula a troca de tema
     temaAtual = 'dark';
-    
+
     const resultado = renderToString(
       <ThemeProvider>
         <ThemeToggle />

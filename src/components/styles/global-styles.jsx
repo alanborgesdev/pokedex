@@ -8,20 +8,20 @@ const GlobalStyle = createGlobalStyle`
     padding: 0;  /* tira os paddings */
     box-sizing: border-box; /* faz o padding contar na largura */
   }
-  
+
   /* Estilização do body - onde tudo acontece */
   body {
     font-family: 'Arial', sans-serif; /* fonte segura pra todo mundo */
-    
+
     /* Fundo pega do tema ou usa um cinza claro */
     background: ${({ theme }) => theme?.colors?.background || '#f5f5f5'};
-    
+
     /* Texto pega do tema ou usa um cinza escuro */
     color: ${({ theme }) => theme?.colors?.text || '#333'};
-    
+
     /* Transição suave quando mudar o tema */
     transition: background-color 0.3s ease, color 0.3s ease;
-    
+
     /* Melhora a aparência do texto */
     -webkit-font-smoothing: antialiased;
     line-height: 1.5;

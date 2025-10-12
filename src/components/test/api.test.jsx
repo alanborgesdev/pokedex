@@ -25,7 +25,7 @@ describe('Testes da API Pokémon', () => {
 
     // Testa nossa função
     const resultado = await getPokemons();
-    
+
     // Verifica se veio certo
     expect(resultado).toEqual([
       {
